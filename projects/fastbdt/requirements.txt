@@ -1,0 +1,9 @@
+# Requirements.txt
+
+# Required to download the scripts folder plot_tools, tools, ks_test
+
+pandas
+matplotlib
+mplhep
+seaborn
+hyperopt
