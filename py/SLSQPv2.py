@@ -1,17 +1,9 @@
 import copy
 import inspect
 import math
-
-from ..util.checks import RuntimeDependency
-
 from typing import Callable, Mapping, Optional, Union
-try:
-    import nlopt
-except ImportError:
-    nlopt = RuntimeDependency("nlopt")
 
 from zfit.minimizers.minimizers_scipy import ScipyBaseMinimizerV1
-from zfit.minimizers.minimizers_nlopt import NLoptBaseMinimizerV1
 from zfit.minimizers.baseminimizer import (NOT_SUPPORTED, BaseMinimizer, minimize_supports,
                             print_minimization_status)
 from zfit.minimizers.termination import CRITERION_NOT_AVAILABLE, ConvergenceCriterion
@@ -110,79 +102,11 @@ class SLSQP(ScipyBaseMinimizerV1):
                          strategy=strategy, criterion=criterion, name=name)
 
 
-# Implementing a NLOpt variant with constraints
-class SLSQP_NLOpt(NLoptBaseMinimizerV1):
-    def __init__(self,
-                #algorithm: int,
-                tol: Optional[float] = 1e-8,
-                #gradient: Optional[Union[Callable, str]] = None,
-                #hessian: Optional[Union[Callable, str]] = None,
-                maxiter: Optional[Union[int, str]] = None,
-                #minimizer_options: Mapping[str, object] | None = None,
-                #internal_tols: Optional[Union[str, float]] = None,
-                verbosity: Optional[int] = None,
-                strategy: Optional[ZfitStrategy] = None,
-                criterion: Optional[ConvergenceCriterion] = None,
-                constraints: Optional[tuple] = (),
-                name: str = "NLopt SLSQP",     
-                ) -> None:
-        options = {}
-        minimizer_options = {}
-        if options:
-            minimizer_options['options'] = options
-        if constraints:
-            minimizer_options['constraints'] = constraints
-
-        super().__init__(
-                algorithm=nlopt.LD_SLSQP,
-                name=name,
-                tol=tol,
-                verbosity=verbosity,
-                minimizer_options=minimizer_options,
-                strategy=strategy,
-                criterion=criterion,
-                maxiter=maxiter,
-                gradient=NOT_SUPPORTED, # gradient=gradient
-                hessian=NOT_SUPPORTED,
-                #minimizer_options={},
-            )
-        
-        
         
 SLSQP._add_derivative_methods(gradient=['2-point', '3-point',
                                                # 'cs',  # works badly
                                                None, True, False, 'zfit'])
 
-# Constraint used in the NLOpt example
-def myconstraint(x, grad, a, b):
-    if grad.size > 0:
-        grad[0] = 3 * a * (a*x[0] + b)**2
-        grad[1] = -1.0
-    return (a*x[0] + b)**3 - x[1]
-
-
-def create_constratint_nlopt(model, afb_index=False, fh_index=False):
-    #First look for the indices of the POIs
-    if (type(afb_index)!=int and afb_index==False) or (type(fh_index)!=int and fh_index==False):
-        #afb_index = False
-        #fh_index  = False
-        for i,p in enumerate(model.get_params()):
-            if 'afb' in p.name.lower() or 'a_fb' in p.name.lower():  afb_index = i
-            if 'fh' in p.name.lower() or 'f_h' in p.name.lower():  fh_index = i
-
-        if str(afb_index)=='False' or str(fh_index)=='False':
-            print('I was not able to find the indices, please fix it here:\n ../scripts/SLSQP_zfit.py')
-            raise NotImplementedError
-    #Now define the "simple" constraints give the found index
-    constAngParams = (
-                  {'type': 'ineq', 'fun': lambda x:  x[fh_index]},
-                  {'type': 'ineq', 'fun': lambda x:  3-x[fh_index]},
-                  {'type': 'ineq', 'fun': lambda x:  x[fh_index]/2-x[afb_index]},
-                  {'type': 'ineq', 'fun': lambda x:  x[fh_index]/2+x[afb_index]}
-                )
-    print(afb_index, fh_index)
-
-    return constAngParams
 
 
 
